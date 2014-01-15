@@ -1,110 +1,130 @@
-
-local SCALE, VSIZE, GAP = .859999995470047, 150, 6 -- max scale: .87
+local SCREENWIDTH = GetScreenWidth() * UIParent:GetEffectiveScale()
 local LAPPY = UIParent:GetHeight() <= 900
 local FONTSIZE = LAPPY and 13 or 11
-
-
-local groups = {
-	[ChatFrame1] = {"BN_INLINE_TOAST_ALERT", "SYSTEM", "SYSTEM_NOMENU", "SAY",
-	                "EMOTE", "MONSTER_SAY", "MONSTER_YELL", "MONSTER_EMOTE",
-	                "MONSTER_WHISPER", "MONSTER_BOSS_EMOTE",
-	                "MONSTER_BOSS_WHISPER", "ERRORS", "CHANNEL", "ACHIEVEMENT"},
-	[ChatFrame3] = {"GUILD", "GUILD_OFFICER", "GUILD_ACHIEVEMENT"},
-	[ChatFrame4] = {"BN_WHISPER", "BN_CONVERSATION", "WHISPER", "AFK", "DND",
-	                "IGNORED", "PARTY", "PARTY_LEADER", "RAID", "RAID_LEADER",
-	                "BG_HORDE", "BG_ALLIANCE", "BG_NEUTRAL", "BATTLEGROUND",
-	                "BATTLEGROUND_LEADER", "RAID_WARNING", "INSTANCE_CHAT",
-	                "INSTANCE_CHAT_LEADER"},
-	[ChatFrame6] = {"COMBAT_FACTION_CHANGE", "SKILL", "LOOT", "MONEY",
-	                "COMBAT_XP_GAIN", "COMBAT_HONOR_GAIN", "COMBAT_MISC_INFO"},
-}
-
-
-local function SetupFrame(frame, h, w, r, g, b, a, ...)
-	local id = frame:GetID()
-
-	if frame ~= ChatFrame1 then
-		SetChatWindowDocked(id, nil)
-		for i,v in pairs(DOCKED_CHAT_FRAMES) do if v == frame then table.remove(DOCKED_CHAT_FRAMES, i) end end
-		frame.isDocked = nil
-
-		frame.isLocked = nil
-		SetChatWindowLocked(id, nil)
-	end
-
-	frame:ClearAllPoints()
-	frame:SetPoint(...)
-	frame:SetHeight(h)
-	frame:SetWidth(w)
-	frame:Show()
-
-	FCF_SetWindowColor(frame, r/255, g/255, b/255)
-	FCF_SetWindowAlpha(frame, a/255)
-
-	local font, _, flags = frame:GetFont()
-	frame:SetFont(font, FONTSIZE, flags)
-	SetChatWindowSize(id, FONTSIZE)
-
---~ 	ChatFrame_RemoveAllChannels(frame)
---~ 	frame.channelList = {}
---~ 	frame.zoneChannelList = {};
-	ChatFrame_RemoveChannel(frame, "General")
-	ChatFrame_RemoveAllMessageGroups(frame)
-	for i,v in pairs(groups[frame]) do ChatFrame_AddMessageGroup(frame, v) end
-end
-
---~ local f = CreateFrame("Frame")
---~ f:RegisterEvent("UPDATE_CHAT_WINDOWS")
---~ f:SetScript("OnEvent", function()
---~ 	f:UnregisterAllEvents()
---~ 	print("HAI!")
---~ 	ChatFrame3.channelList[1], ChatFrame3.zoneChannelList[1] = "GuildRecruitment", 25
---~ 	ChatFrame_RegisterForChannels(ChatFrame3, "GuildRecruitment", 25)
---~ 	ChatFrame_AddChannel(ChatFrame3, "GuildRecruitment")
---~ 	ChatFrame_AddChannel(ChatFrame3, "Trade")
---~ end)
 
 local f = CreateFrame("frame")
 f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", function()
 	f:UnregisterAllEvents()
 	f:SetScript("OnEvent", nil)
-
-
-	-- Make sure autoloot is on
+  
+  SetCVar("chatBubbles", 0)
+  SetCVar("chatBubblesParty", 1)
+  SetCVar("guildMemberNotify", 1)
+  SetCVar("violenceLevel", 5)
+  SetCVar("alwaysCompareItems", 1)
+  SetCVar("ObjectSelectionCircle", 1)
+	SetCVar("alternateResourceText", 1)
+	SetCVar("statusTextDisplay", "BOTH")
+	SetCVar("mapQuestDifficulty", 1)
+	SetCVar("ShowClassColorInNameplate", 1)
+	SetCVar("screenshotQuality", 10)
+	SetCVar("chatMouseScroll", 1)
+	SetCVar("chatStyle", "classic")
+	SetCVar("WholeChatWindowClickable", 0)
+	SetCVar("ConversationMode", "inline")
+	SetCVar("showTutorials", 0)
+	SetCVar("UberTooltips", 1)
+	SetCVar("threatWarning", 3)
+	SetCVar('alwaysShowActionBars', 1)
+	SetCVar('lockActionBars', 1)
+	SetCVar('SpamFilter', 1)
 	SetCVar("autoLootDefault", 1)
-
-
-	-- Seems Wrath likes to undo scale from time to time
+  SetCVar("scriptErrors", 1)
 	SetCVar("useUiScale", 1)
-	SetCVar("UISCALE", SCALE)
+	SetCVar("uiScale", SCALE)
+  SetCVar("uiScale", 768/string.match(({GetScreenResolutions()})[GetCurrentResolution()], "%d+x(%d+)"))
 
-	local HSIZE = UIParent:GetWidth()/3-GAP
+  FCF_ResetChatWindows()
+	FCF_SetLocked(ChatFrame1, 1)
+	FCF_DockFrame(ChatFrame2)
+	FCF_SetLocked(ChatFrame2, 1)
 
+	FCF_OpenNewWindow(LOOT)
+	FCF_UnDockFrame(ChatFrame3)
+	FCF_SetLocked(ChatFrame3, 1)
+	ChatFrame3:Show()			
 
-	-- Force on raid coloring
-	for i,v in pairs(CHAT_CONFIG_CHAT_LEFT) do ToggleChatColorNamesByClassGroup(true, v.type) end
+  for i = 1, NUM_CHAT_WINDOWS do
+		local frame = _G[format("ChatFrame%s", i)]
+		local chatFrameId = frame:GetID()
+		local chatName = FCF_GetChatWindowInfo(chatFrameId)
 
+    frame:SetHeight(150)
+    frame:SetWidth( ( (SCREENWIDTH -400) / 2) )
 
-	SetupFrame(ChatFrame1, VSIZE, HSIZE, 51, 51, 51, 107, "BOTTOMLEFT", UIParent, GAP/2, GAP+3)
-	ChatFrame1.SetPoint = function() end -- Wrath build 8820 started resetting ChatFrame1's position.  This ensures it doesn't fuck with my layout.
-	SetupFrame(ChatFrame3, VSIZE/2 - GAP/2, HSIZE, 5, 70, 6, 91, "TOPLEFT", ChatFrame1, "TOPRIGHT", GAP, 0)
-	SetupFrame(ChatFrame4, VSIZE/2 - GAP/2, HSIZE, 81, 14, 68, 119, "TOPLEFT", ChatFrame3, "BOTTOMLEFT", 0, -GAP)
-	SetupFrame(ChatFrame6, VSIZE, HSIZE, 39, 65, 68, 112, "TOPLEFT", ChatFrame3, "TOPRIGHT", GAP, 0)
-	FCF_Close(ChatFrame5)
-	FCF_Close(ChatFrame7)
+    if i == 1 then
+			frame:ClearAllPoints()
+			frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 5, 10)		
+      frame:SetUserPlaced(true)      
+		elseif i == 3 then
+			frame:ClearAllPoints()
+			frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -5, 10)
+		end
 
-	FCF_SetLocked(ChatFrame1, true)
-	FCF_SetLocked(ChatFrame3, true)
-	FCF_SetLocked(ChatFrame4, true)
-	FCF_SetLocked(ChatFrame6, true)
+		FCF_SavePositionAndDimensions(frame)
+		FCF_StopDragging(frame)
+		FCF_SetChatWindowFontSize(nil, frame, FONTSIZE)        
+    FCF_SetWindowColor(frame, 0, 0, 0)
+    FCF_SetWindowAlpha(frame, 0)
+		
+		-- rename windows 
+		if i == 1 then
+			FCF_SetWindowName(frame, 'General')
+		elseif i == 2 then
+			FCF_SetWindowName(frame, 'Guild')
+		elseif i == 3 then 
+			FCF_SetWindowName(frame, 'Loot') 
+		end
+	end
+	
+	ChatFrame_RemoveAllMessageGroups(ChatFrame1)
+	ChatFrame_AddMessageGroup(ChatFrame1, "SAY")
+	ChatFrame_AddMessageGroup(ChatFrame1, "EMOTE")
+	ChatFrame_AddMessageGroup(ChatFrame1, "YELL")
+	ChatFrame_AddMessageGroup(ChatFrame1, "GUILD")
+	ChatFrame_AddMessageGroup(ChatFrame1, "OFFICER")
+	ChatFrame_AddMessageGroup(ChatFrame1, "GUILD_ACHIEVEMENT")
+	ChatFrame_AddMessageGroup(ChatFrame1, "WHISPER")
 
+	ChatFrame_AddMessageGroup(ChatFrame1, "PARTY")
+	ChatFrame_AddMessageGroup(ChatFrame1, "PARTY_LEADER")
+	ChatFrame_AddMessageGroup(ChatFrame1, "RAID")
+	ChatFrame_AddMessageGroup(ChatFrame1, "RAID_LEADER")
+	ChatFrame_AddMessageGroup(ChatFrame1, "RAID_WARNING")
+	ChatFrame_AddMessageGroup(ChatFrame1, "INSTANCE_CHAT")
+	ChatFrame_AddMessageGroup(ChatFrame1, "INSTANCE_CHAT_LEADER")	
+	ChatFrame_AddMessageGroup(ChatFrame1, "BATTLEGROUND")
+	ChatFrame_AddMessageGroup(ChatFrame1, "BATTLEGROUND_LEADER")
+	ChatFrame_AddMessageGroup(ChatFrame1, "BG_HORDE")
+	ChatFrame_AddMessageGroup(ChatFrame1, "BG_ALLIANCE")
+	ChatFrame_AddMessageGroup(ChatFrame1, "BG_NEUTRAL")
+	ChatFrame_AddMessageGroup(ChatFrame1, "AFK")
+	ChatFrame_AddMessageGroup(ChatFrame1, "DND")
+	ChatFrame_AddMessageGroup(ChatFrame1, "IGNORED")
+	ChatFrame_AddMessageGroup(ChatFrame1, "ACHIEVEMENT")
+	ChatFrame_AddMessageGroup(ChatFrame1, "BN_WHISPER")
+	ChatFrame_AddMessageGroup(ChatFrame1, "BN_CONVERSATION")
+	ChatFrame_AddMessageGroup(ChatFrame1, "BN_INLINE_TOAST_ALERT")
+	
+	ChatFrame_RemoveAllMessageGroups(ChatFrame3)	
+  ChatFrame_AddMessageGroup(ChatFrame3, "ERRORS")
+  ChatFrame_AddMessageGroup(ChatFrame3, "SYSTEM")
+	ChatFrame_AddMessageGroup(ChatFrame3, "COMBAT_FACTION_CHANGE")
+	ChatFrame_AddMessageGroup(ChatFrame3, "SKILL")
+	ChatFrame_AddMessageGroup(ChatFrame3, "LOOT")
+	ChatFrame_AddMessageGroup(ChatFrame3, "MONEY")
+	ChatFrame_AddMessageGroup(ChatFrame3, "COMBAT_XP_GAIN")
+	ChatFrame_AddMessageGroup(ChatFrame3, "COMBAT_HONOR_GAIN")
+	ChatFrame_AddMessageGroup(ChatFrame3, "COMBAT_GUILD_XP_GAIN")
+	ChatFrame_AddMessageGroup(ChatFrame3, "MONSTER_SAY")
+	ChatFrame_AddMessageGroup(ChatFrame3, "MONSTER_EMOTE")
+	ChatFrame_AddMessageGroup(ChatFrame3, "MONSTER_YELL")
+	ChatFrame_AddMessageGroup(ChatFrame3, "MONSTER_BOSS_EMOTE")  
+	ChatFrame_AddChannel(ChatFrame1, "General")
+	ChatFrame_RemoveChannel(ChatFrame1, 'Trade')
+	ChatFrame_AddChannel(ChatFrame3, 'Trade')
 
-	WorldFrame:ClearAllPoints()
-	WorldFrame:SetUserPlaced()
-	WorldFrame:SetPoint("TOPRIGHT", UIParent)
-	WorldFrame:SetPoint("LEFT", UIParent)
-	WorldFrame:SetPoint("BOTTOM", ChatFrame1, "TOP", 0, GAP/2)
 
 	PetBattleFrame:SetPoint("BOTTOMRIGHT", WorldFrame, "BOTTOMRIGHT", 0, 4)
 	PetBattleFrame:SetFrameStrata("HIGH")
